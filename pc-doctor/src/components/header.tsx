@@ -15,6 +15,7 @@ export function Header() {
   const [loading, setLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  const [activeSection, setActiveSection] = useState("")
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
@@ -29,18 +30,28 @@ export function Header() {
     }, 300) // Match animation duration
   }
 
-  const isActive = (href: string) => {
-    if (href === "/" && pathname === "/") return true
-    if (href !== "/" && pathname.startsWith(href)) return true
-    return false
+  const handleNavClick = (section: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    setActiveSection(section)
+    
+    // Smooth scroll to section
+    const element = document.getElementById(section)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 
-  useEffect(() => {
-    const updateIndicator = () => {
-      if (!navRef.current || !mounted) return
+  const isActive = (section: string) => {
+    return activeSection === section
+  }
 
-      const activeLink = navRef.current.querySelector('[data-active="true"]') as HTMLElement
-      if (activeLink) {
+  // Update indicator position
+  useEffect(() => {
+    if (!navRef.current || !mounted || pathname !== "/") return
+
+    const updateIndicator = () => {
+      const activeLink = navRef.current?.querySelector('[data-active="true"]') as HTMLElement
+      if (activeLink && navRef.current) {
         const navRect = navRef.current.getBoundingClientRect()
         const linkRect = activeLink.getBoundingClientRect()
         setIndicatorStyle({
@@ -49,21 +60,18 @@ export function Header() {
           opacity: 1
         })
       } else {
-        setIndicatorStyle(prev => ({ ...prev, opacity: 0 }))
+        setIndicatorStyle({ left: 0, width: 0, opacity: 0 })
       }
     }
 
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(updateIndicator, 100)
-
-    // Update on window resize
+    // Update immediately and on resize
+    updateIndicator()
     window.addEventListener('resize', updateIndicator)
 
     return () => {
       window.removeEventListener('resize', updateIndicator)
-      clearTimeout(timer)
     }
-  }, [pathname])
+  }, [activeSection, mounted, pathname])
 
   useEffect(() => {
     setMounted(true)
@@ -109,65 +117,50 @@ export function Header() {
           
           {/* Navigation - Left aligned */}
           <nav ref={navRef} className="hidden md:flex items-center gap-1 flex-1 relative">
-            {!user && (
+            {pathname === "/" && (
               <>
                 <Link
                   href="#features"
-                  className="relative px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-300"
+                  onClick={(e) => handleNavClick("features", e)}
+                  data-active={isActive("features")}
+                  className={`relative px-3 py-2 text-sm font-medium transition-colors duration-300 ${
+                    isActive("features") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
                   Features
                 </Link>
                 <Link
                   href="#how-it-works"
-                  className="relative px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-300"
+                  onClick={(e) => handleNavClick("how-it-works", e)}
+                  data-active={isActive("how-it-works")}
+                  className={`relative px-3 py-2 text-sm font-medium transition-colors duration-300 ${
+                    isActive("how-it-works") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
                   How It Works
                 </Link>
                 <Link
                   href="#benefits"
-                  className="relative px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-300"
+                  onClick={(e) => handleNavClick("benefits", e)}
+                  data-active={isActive("benefits")}
+                  className={`relative px-3 py-2 text-sm font-medium transition-colors duration-300 ${
+                    isActive("benefits") ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
                   Benefits
                 </Link>
+                
+                {/* Sliding indicator */}
+                <span
+                  className="absolute bottom-0 h-0.5 bg-primary rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    left: `${indicatorStyle.left}px`,
+                    width: `${indicatorStyle.width}px`,
+                    opacity: indicatorStyle.opacity
+                  }}
+                />
               </>
             )}
-            <Link
-              href="/about"
-              data-active={isActive("/about")}
-              className={`relative px-3 py-2 text-sm font-medium transition-colors duration-300 ${
-                isActive("/about") ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              About
-            </Link>
-            <Link
-              href="/privacy"
-              data-active={isActive("/privacy")}
-              className={`relative px-3 py-2 text-sm font-medium transition-colors duration-300 ${
-                isActive("/privacy") ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Privacy
-            </Link>
-            <Link
-              href="/terms"
-              data-active={isActive("/terms")}
-              className={`relative px-3 py-2 text-sm font-medium transition-colors duration-300 ${
-                isActive("/terms") ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Terms
-            </Link>
-            
-            {/* Sliding indicator */}
-            <span
-              className="absolute bottom-0 h-0.5 bg-primary rounded-full transition-all duration-500 ease-out"
-              style={{
-                left: `${indicatorStyle.left}px`,
-                width: `${indicatorStyle.width}px`,
-                opacity: indicatorStyle.opacity
-              }}
-            />
           </nav>
           
           {/* Mobile menu button */}

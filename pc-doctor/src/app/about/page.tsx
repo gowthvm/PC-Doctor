@@ -12,7 +12,7 @@ export default function AboutPage() {
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent opacity-50" />
 
       <main className="relative z-10 pt-8">
-        <section className="container mx-auto px-4 py-12 animate-fade-in">
+        <section className="container mx-auto px-4 py-12">
           <div className="max-w-4xl mx-auto space-y-12">
             {/* Header */}
             <div className="text-center space-y-4">
