@@ -204,25 +204,53 @@
   }
 }
 
-@keyframes slide-out-to-right {
+@keyframes slide-out-to-left {
   from {
     transform: translateX(0);
     opacity: 1;
   }
   to {
-    transform: translateX(100%);
+    transform: translateX(-100%);
     opacity: 0;
   }
 }
 
-.animate-pulse-slow {
-  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Add smooth sidebar transition */
+@keyframes slide-sidebar-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.5s ease-out;
+@keyframes slide-sidebar-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out;
+.animate-sidebar-in {
+  animation: slide-sidebar-in 0.3s ease-out forwards;
+}
+
+.animate-sidebar-out {
+  animation: slide-sidebar-out 0.3s ease-out forwards;
+}
+
+/* Enhanced transition classes */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.transform-smooth {
+  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }

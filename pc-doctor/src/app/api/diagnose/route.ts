@@ -14,6 +14,57 @@ interface DiagnosisRequest {
   problem: string
 }
 
+// Function to get available API keys from environment variables
+function getAvailableApiKeys(): string[] {
+  const keys: string[] = []
+  const keyEnvVars = [
+    process.env.OPENROUTER_API_KEY,
+    process.env.OPENROUTER_API_KEY_2,
+    process.env.OPENROUTER_API_KEY_3
+  ]
+  
+  // Filter out undefined or empty keys
+  keyEnvVars.forEach(key => {
+    if (key && key.trim() !== '') {
+      keys.push(key.trim())
+    }
+  })
+  
+  return keys
+}
+
+// Function to make API call with a specific key
+async function callOpenRouterWithKey(apiKey: string, prompt: string) {
+  return await fetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+        "X-Title": "PC Doctor",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are PC Doctor, an expert computer technician. Provide detailed, accurate technical diagnoses and solutions. Always respond with valid JSON only, no additional text.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    }
+  )
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
@@ -70,41 +121,44 @@ Please provide your response in the following JSON format:
 
 Provide 3-5 solution steps that are clear, actionable, and appropriate for the user's system. Include specific commands when applicable. Make sure the confidence score reflects how certain you are about the diagnosis based on the information provided.`
 
-    // Call OpenRouter API
-    const openRouterResponse = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-          "X-Title": "PC Doctor",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are PC Doctor, an expert computer technician. Provide detailed, accurate technical diagnoses and solutions. Always respond with valid JSON only, no additional text.",
-            },
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 2000,
-        }),
-      }
-    )
-
-    if (!openRouterResponse.ok) {
-      const errorData = await openRouterResponse.json()
-      console.error("OpenRouter API error:", errorData)
+    // Get available API keys
+    const apiKeys = getAvailableApiKeys()
+    
+    if (apiKeys.length === 0) {
       return NextResponse.json(
-        { error: "Failed to get diagnosis from AI service" },
+        { error: "No OpenRouter API keys configured" },
+        { status: 500 }
+      )
+    }
+
+    // Try each API key until one works or all fail
+    let openRouterResponse: Response | null = null
+    let lastError: any = null
+    
+    for (const apiKey of apiKeys) {
+      try {
+        openRouterResponse = await callOpenRouterWithKey(apiKey, prompt)
+        
+        // If the response is successful, break the loop
+        if (openRouterResponse.ok) {
+          break
+        } else {
+          // If not successful, store the error and try the next key
+          const errorData = await openRouterResponse.json()
+          console.error(`OpenRouter API error with key ${apiKey.substring(0, 10)}...:`, errorData)
+          lastError = errorData
+        }
+      } catch (error) {
+        console.error(`Network error with key ${apiKey.substring(0, 10)}...:`, error)
+        lastError = error
+      }
+    }
+
+    // If all keys failed
+    if (!openRouterResponse || !openRouterResponse.ok) {
+      console.error("All OpenRouter API keys failed:", lastError)
+      return NextResponse.json(
+        { error: "Failed to get diagnosis from AI service - all API keys exhausted" },
         { status: 500 }
       )
     }

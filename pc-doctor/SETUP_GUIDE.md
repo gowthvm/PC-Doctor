@@ -196,9 +196,13 @@ copy .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...your-key-here
 
-# OpenRouter API Configuration
-OPENROUTER_API_KEY=sk-or-v1-...your-key-here
+# OpenRouter API Configuration (Multiple keys for redundancy)
+OPENROUTER_API_KEY=sk-or-v1-...your-primary-key-here
+OPENROUTER_API_KEY_2=sk-or-v1-...your-secondary-key-here
+OPENROUTER_API_KEY_3=sk-or-v1-...your-tertiary-key-here
 ```
+
+> **Note:** The application will automatically rotate through these API keys if one fails, providing better reliability. You can configure 1-3 API keys.
 
 4. Save the file
 
@@ -373,6 +377,7 @@ Stores all diagnosis history for users.
 - Verify your API key is correct in `.env.local`
 - Check that your OpenRouter account has credits
 - Make sure there are no extra spaces in the key
+- If using multiple keys, ensure at least one key is valid and has credits
 
 ### Issue: "Unauthorized" when trying to diagnose
 

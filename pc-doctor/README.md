@@ -98,9 +98,13 @@ Edit `.env.local` and add your credentials:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# OpenRouter API Configuration
-OPENROUTER_API_KEY=your_openrouter_api_key
+# OpenRouter API Configuration (Multiple keys for redundancy)
+OPENROUTER_API_KEY=your_primary_openrouter_api_key
+OPENROUTER_API_KEY_2=your_secondary_openrouter_api_key  # Optional
+OPENROUTER_API_KEY_3=your_tertiary_openrouter_api_key   # Optional
 ```
+
+> **Note:** The application supports up to 3 OpenRouter API keys for improved reliability. It will automatically rotate through available keys if one fails.
 
 ### 6. Run the Development Server
 
@@ -238,6 +242,7 @@ Make sure to add all environment variables from `.env.local` to your Vercel proj
 - Verify OpenRouter API key is correct
 - Check OpenRouter account has sufficient credits
 - Review API logs in OpenRouter dashboard
+- If using multiple keys, ensure at least one key is valid and has credits
 
 **Build errors:**
 - Clear `.next` folder: `rm -rf .next`

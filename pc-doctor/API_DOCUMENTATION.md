@@ -350,6 +350,22 @@ const handleSubmit = async (e) => {
 - OpenRouter API key is stored in environment variables
 - Never exposed to the client
 - Only accessible server-side
+- Supports multiple API keys for redundancy (automatic failover)
+
+### API Key Rotation
+
+The API supports up to 3 OpenRouter API keys for improved reliability:
+
+1. `OPENROUTER_API_KEY` (primary)
+2. `OPENROUTER_API_KEY_2` (secondary)
+3. `OPENROUTER_API_KEY_3` (tertiary)
+
+If the primary key fails (due to rate limits, quota exhaustion, or invalid key), the system will automatically attempt to use the secondary key, and then the tertiary key if needed. This provides redundancy and improved uptime for the diagnosis service.
+
+To configure multiple keys:
+1. Add your keys to the `.env.local` file
+2. The system will automatically detect and use available keys
+3. At least one valid key is required for the service to function
 
 ### Authentication
 
@@ -436,7 +452,7 @@ Use tools like:
 
 ### Example curl Request
 
-```bash
+``bash
 curl -X POST http://localhost:3000/api/diagnose \
   -H "Content-Type: application/json" \
   -H "Cookie: sb-access-token=YOUR_TOKEN" \
