@@ -11,6 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toast } from "sonner"
 import { 
   Cpu, 
   HardDrive, 
@@ -29,8 +32,12 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Calendar,
-  X
+  X,
+  Trash2,
+  Youtube,
+  Check
 } from "lucide-react"
 
 interface DiagnosisStep {
@@ -39,7 +46,11 @@ interface DiagnosisStep {
   description: string
   difficulty: "easy" | "medium" | "hard"
   estimatedTime: string
-  commands?: string[]
+  commands?: {
+    windows?: string[]
+    macos?: string[]
+    linux?: string[]
+  }
   warnings?: string[]
 }
 
@@ -93,6 +104,12 @@ export default function DashboardPage() {
   const [pastDiagnoses, setPastDiagnoses] = useState<PastDiagnosis[]>([])
   const [filteredDiagnoses, setFilteredDiagnoses] = useState<PastDiagnosis[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  
+  // New UX enhancement states
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set([1]))
+  const [detectedOS, setDetectedOS] = useState<string>("")
+  
   const router = useRouter()
   const supabase = createClient()
 
@@ -103,6 +120,20 @@ export default function DashboardPage() {
       setUser(user)
     }
     getUser()
+    
+    // Detect OS
+    const osDetected = (() => {
+      const ua = navigator.userAgent
+      const platform = (navigator as any).userAgentData?.platform || navigator.platform || ""
+      const p = platform.toLowerCase()
+      if (p.includes("win")) return "Windows"
+      if (p.includes("mac")) return "macOS"
+      if (p.includes("linux")) return "Linux"
+      if (/android/i.test(ua)) return "Android"
+      if (/iPhone|iPad|iPod/i.test(ua)) return "iOS"
+      return "Windows"
+    })()
+    setDetectedOS(osDetected)
   }, [])
 
   // Fetch past diagnoses
@@ -166,10 +197,21 @@ export default function DashboardPage() {
     setError(null)
     setStatus("idle")
     setProgress(0)
+    setCompletedSteps(new Set())
+    setExpandedSteps(new Set([1]))
   }
 
   const handleCopyDiagnosis = () => {
     if (!diagnosis) return
+    
+    const formatCommands = (commands?: { windows?: string[]; macos?: string[]; linux?: string[] }) => {
+      if (!commands) return ''
+      let result = 'Commands:\n'
+      if (commands.windows) result += `Windows:\n${commands.windows.join('\n')}\n`
+      if (commands.macos) result += `macOS:\n${commands.macos.join('\n')}\n`
+      if (commands.linux) result += `Linux:\n${commands.linux.join('\n')}\n`
+      return result
+    }
     
     const text = `
 PC Doctor Diagnosis Report
@@ -189,7 +231,7 @@ Step ${step.step}: ${step.title}
 Difficulty: ${step.difficulty}
 Estimated Time: ${step.estimatedTime}
 ${step.description}
-${step.commands ? `Commands:\n${step.commands.join('\n')}` : ''}
+${step.commands ? formatCommands(step.commands) : ''}
 ${step.warnings ? `Warnings:\n${step.warnings.join('\n')}` : ''}
 `).join('\n')}
 
@@ -198,10 +240,20 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
     `.trim()
     
     navigator.clipboard.writeText(text)
+    toast.success("Diagnosis copied to clipboard!")
   }
 
   const handleDownloadPDF = () => {
     if (!diagnosis) return
+    
+    const formatCommands = (commands?: { windows?: string[]; macos?: string[]; linux?: string[] }) => {
+      if (!commands) return ''
+      let result = 'Commands:\n'
+      if (commands.windows) result += `Windows:\n${commands.windows.join('\n')}\n`
+      if (commands.macos) result += `macOS:\n${commands.macos.join('\n')}\n`
+      if (commands.linux) result += `Linux:\n${commands.linux.join('\n')}\n`
+      return result
+    }
     
     // Create a simple text version for now (PDF generation would require a library)
     const text = `
@@ -222,7 +274,7 @@ Step ${step.step}: ${step.title}
 Difficulty: ${step.difficulty}
 Estimated Time: ${step.estimatedTime}
 ${step.description}
-${step.commands ? `Commands:\n${step.commands.join('\n')}` : ''}
+${step.commands ? formatCommands(step.commands) : ''}
 ${step.warnings ? `Warnings:\n${step.warnings.join('\n')}` : ''}
 `).join('\n')}
 
@@ -239,6 +291,7 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    toast.success("Diagnosis downloaded!")
   }
 
   const handleLoadPastDiagnosis = (pastDiagnosis: PastDiagnosis) => {
@@ -249,6 +302,108 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
     setRam(pastDiagnosis.system_specs.ram)
     setOs(pastDiagnosis.system_specs.os)
     setStorage(pastDiagnosis.system_specs.storage)
+    setCompletedSteps(new Set())
+    setExpandedSteps(new Set([1]))
+  }
+
+  const toggleStepCompletion = (stepNumber: number) => {
+    const newCompleted = new Set(completedSteps)
+    if (newCompleted.has(stepNumber)) {
+      newCompleted.delete(stepNumber)
+    } else {
+      newCompleted.add(stepNumber)
+    }
+    setCompletedSteps(newCompleted)
+  }
+
+  const toggleStepExpansion = (stepNumber: number) => {
+    const newExpanded = new Set(expandedSteps)
+    if (newExpanded.has(stepNumber)) {
+      newExpanded.delete(stepNumber)
+    } else {
+      newExpanded.add(stepNumber)
+    }
+    setExpandedSteps(newExpanded)
+  }
+
+  const handleCopyCommand = (command: string) => {
+    navigator.clipboard.writeText(command)
+    toast.success("Command copied!")
+  }
+
+  const getStepProgress = () => {
+    if (!diagnosis || diagnosis.steps.length === 0) return 0
+    return (completedSteps.size / diagnosis.steps.length) * 100
+  }
+
+  const handleAutoDetectSpecs = () => {
+    try {
+      // Detect CPU cores
+      const cores = (navigator as any).hardwareConcurrency
+      setCpu(cores ? `${cores} logical cores` : "")
+
+      // Detect approximate RAM (Chrome/Edge only, rounded to power of 2)
+      const deviceMemory = (navigator as any).deviceMemory
+      if (typeof deviceMemory === "number") {
+        setRam(`~${deviceMemory} GB (browser estimate, may be inaccurate)`)
+      } else {
+        setRam("")
+      }
+
+      // Detect OS
+      const osDetected = (() => {
+        const ua = navigator.userAgent
+        const platform = (navigator as any).userAgentData?.platform || navigator.platform || ""
+        const p = platform.toLowerCase()
+        if (p.includes("win")) return "Windows"
+        if (p.includes("mac")) return "macOS"
+        if (p.includes("linux")) return "Linux"
+        if (/android/i.test(ua)) return "Android"
+        if (/iPhone|iPad|iPod/i.test(ua)) return "iOS"
+        return ""
+      })()
+      setOs(osDetected)
+
+      // Detect GPU via WebGL
+      const getWebGLRenderer = () => {
+        try {
+          const canvas = document.createElement("canvas")
+          const gl = (canvas.getContext("webgl") || canvas.getContext("experimental-webgl")) as any
+          if (!gl) return null
+          const ext = gl.getExtension("WEBGL_debug_renderer_info")
+          if (!ext) return null
+          const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)
+          return typeof renderer === "string" ? renderer : null
+        } catch {
+          return null
+        }
+      }
+      const renderer = getWebGLRenderer()
+      setGpu(renderer || "")
+
+      // Storage not available via browser
+      setStorage("")
+    } catch (e) {
+      console.error("Auto-detect specs failed:", e)
+    }
+  }
+
+  const deleteDiagnosis = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("diagnoses")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id)
+
+      if (error) {
+        console.error("Error deleting diagnosis:", error)
+        return
+      }
+      setPastDiagnoses(prev => prev.filter(d => d.id !== id))
+    } catch (err) {
+      console.error("Error deleting diagnosis:", err)
+    }
   }
 
   const handleDiagnose = async (e: React.FormEvent) => {
@@ -476,9 +631,20 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
                             <h4 className="font-medium text-sm line-clamp-2 flex-1 mr-2">
                               {diagnosis.diagnosis_result.diagnosis}
                             </h4>
-                            <Badge variant="outline" className="text-xs flex-shrink-0">
-                              {diagnosis.diagnosis_result.confidence}%
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs flex-shrink-0">
+                                {diagnosis.diagnosis_result.confidence}%
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
+                                onClick={(e) => { e.stopPropagation(); deleteDiagnosis(diagnosis.id) }}
+                                title="Delete diagnosis"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                           
                           <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
@@ -544,10 +710,24 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
               <div className={`space-y-6 transition-all duration-700 ${diagnosis ? 'lg:w-1/2' : 'lg:w-full max-w-3xl'}`}>
                 <Card className="glass-card rounded-2xl shadow-xl">
                   <CardHeader>
-                    <CardTitle>System Specifications</CardTitle>
-                    <CardDescription>
-                      Provide your system details (optional but helps with accuracy)
-                    </CardDescription>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle>System Specifications</CardTitle>
+                        <CardDescription>
+                          Provide your system details (optional but helps with accuracy)
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAutoDetectSpecs}
+                        className="rounded-full"
+                        type="button"
+                      >
+                        <Sparkles className="h-4 w-4 mr-1" />
+                        Auto-detect
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -621,6 +801,20 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleDiagnose} className="space-y-4">
+                      {!problem && !diagnosis && (
+                        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mb-4">
+                          <p className="text-xs font-medium mb-2 flex items-center gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            Example problem descriptions:
+                          </p>
+                          <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                            <li>• My PC takes 10 minutes to boot and programs freeze constantly</li>
+                            <li>• Blue screen error 0x0000007B after Windows update</li>
+                            <li>• Laptop overheats and shuts down during gaming</li>
+                            <li>• Wi-Fi keeps disconnecting every few minutes</li>
+                          </ul>
+                        </div>
+                      )}
                       <Textarea
                         placeholder="e.g., My computer is running very slow, takes 5 minutes to boot, and programs freeze frequently..."
                         value={problem}
@@ -780,58 +974,187 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
 
                     <Card className="glass-card rounded-2xl shadow-xl">
                       <CardHeader>
-                        <CardTitle>Solution Steps</CardTitle>
-                        <CardDescription>
-                          Follow these steps carefully to resolve the issue
-                        </CardDescription>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle>Solution Steps</CardTitle>
+                            <CardDescription>
+                              Follow these steps carefully to resolve the issue
+                            </CardDescription>
+                          </div>
+                          {diagnosis.steps.length > 0 && (
+                            <div className="text-sm">
+                              <div className="flex items-center gap-2 mb-1">
+                                <CheckCircle2 className="h-4 w-4 text-primary" />
+                                <span className="font-medium">{completedSteps.size} / {diagnosis.steps.length} Complete</span>
+                              </div>
+                              <Progress value={getStepProgress()} className="h-2 w-32" />
+                            </div>
+                          )}
+                        </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {diagnosis.steps.map((step, index) => (
-                          <div key={index} className="p-5 rounded-xl glass border">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary text-sm font-semibold">
-                                  {step.step}
+                        {diagnosis.steps.map((step, index) => {
+                          const isExpanded = expandedSteps.has(step.step)
+                          const isCompleted = completedSteps.has(step.step)
+                          const hasWarning = step.warnings && step.warnings.length > 0
+                          const hasCommands = step.commands && (step.commands.windows || step.commands.macos || step.commands.linux)
+                          
+                          return (
+                            <div key={index} className={`rounded-xl glass border transition-all duration-300 ${
+                              isCompleted ? 'bg-green-500/5 border-green-500/20' : ''
+                            }`}>
+                              <div 
+                                className="p-5 cursor-pointer hover:bg-primary/5 transition-colors rounded-xl"
+                                onClick={() => toggleStepExpansion(step.step)}
+                              >
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <Checkbox
+                                      checked={isCompleted}
+                                      onCheckedChange={() => toggleStepCompletion(step.step)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="mt-1"
+                                    />
+                                    <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                                      isCompleted ? 'bg-green-500/20 text-green-500' : 'bg-primary/20 text-primary'
+                                    } text-sm font-semibold`}>
+                                      {isCompleted ? <Check className="h-4 w-4" /> : step.step}
+                                    </div>
+                                    <h4 className={`font-semibold ${
+                                      isCompleted ? 'line-through text-muted-foreground' : ''
+                                    }`}>{step.title}</h4>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className={`${getDifficultyColor(step.difficulty)} rounded-full`}>
+                                      {step.difficulty}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs rounded-full">
+                                      {step.estimatedTime}
+                                    </Badge>
+                                    <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${
+                                      isExpanded ? 'rotate-180' : ''
+                                    }`} />
+                                  </div>
                                 </div>
-                                <h4 className="font-semibold">{step.title}</h4>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className={`${getDifficultyColor(step.difficulty)} rounded-full`}>
-                                  {step.difficulty}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs rounded-full">
-                                  {step.estimatedTime}
-                                </Badge>
+                              
+                              <div className={`overflow-hidden transition-all duration-300 ${
+                                isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                              }`}>
+                                <div className="px-5 pb-5 space-y-4">
+                                  <p className="text-sm text-muted-foreground">
+                                    {step.description}
+                                  </p>
+                                  
+                                  {hasCommands && step.commands && (
+                                    <div className="space-y-2">
+                                      <p className="text-xs font-medium">Commands:</p>
+                                      <Tabs defaultValue={detectedOS.toLowerCase()} className="w-full">
+                                        <TabsList className="grid w-full grid-cols-3">
+                                          <TabsTrigger value="windows" disabled={!step.commands.windows}>Windows</TabsTrigger>
+                                          <TabsTrigger value="macos" disabled={!step.commands.macos}>macOS</TabsTrigger>
+                                          <TabsTrigger value="linux" disabled={!step.commands.linux}>Linux</TabsTrigger>
+                                        </TabsList>
+                                        {step.commands.windows && (
+                                          <TabsContent value="windows" className="space-y-2">
+                                            {step.commands.windows.map((cmd, cmdIndex) => (
+                                              <div key={cmdIndex} className="relative group">
+                                                <code className="block p-3 pr-12 rounded-lg bg-muted text-xs font-mono">
+                                                  {cmd}
+                                                </code>
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="absolute right-2 top-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                  onClick={() => handleCopyCommand(cmd)}
+                                                >
+                                                  <Copy className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            ))}
+                                          </TabsContent>
+                                        )}
+                                        {step.commands.macos && (
+                                          <TabsContent value="macos" className="space-y-2">
+                                            {step.commands.macos.map((cmd, cmdIndex) => (
+                                              <div key={cmdIndex} className="relative group">
+                                                <code className="block p-3 pr-12 rounded-lg bg-muted text-xs font-mono">
+                                                  {cmd}
+                                                </code>
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="absolute right-2 top-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                  onClick={() => handleCopyCommand(cmd)}
+                                                >
+                                                  <Copy className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            ))}
+                                          </TabsContent>
+                                        )}
+                                        {step.commands.linux && (
+                                          <TabsContent value="linux" className="space-y-2">
+                                            {step.commands.linux.map((cmd, cmdIndex) => (
+                                              <div key={cmdIndex} className="relative group">
+                                                <code className="block p-3 pr-12 rounded-lg bg-muted text-xs font-mono">
+                                                  {cmd}
+                                                </code>
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="absolute right-2 top-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                  onClick={() => handleCopyCommand(cmd)}
+                                                >
+                                                  <Copy className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            ))}
+                                          </TabsContent>
+                                        )}
+                                      </Tabs>
+                                    </div>
+                                  )}
+                                  
+                                  {hasWarning && (
+                                    <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 space-y-2">
+                                      <p className="text-xs font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
+                                        <AlertCircle className="h-4 w-4" />
+                                        Warning - Read Carefully
+                                      </p>
+                                      {step.warnings?.map((warning, warnIndex) => (
+                                        <p key={warnIndex} className="text-xs text-yellow-600 dark:text-yellow-500">
+                                          {warning}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  )}
+                                  
+                                  
+                                  {/* YouTube Search Button */}
+                                  <div className="mt-4">
+                                    <a
+                                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${step.title} ${os || detectedOS} tutorial`)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="w-full inline-block"
+                                    >
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full justify-start text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/10"
+                                        type="button"
+                                      >
+                                        <Youtube className="h-3 w-3 mr-2" />
+                                        Find Video Tutorials on YouTube
+                                      </Button>
+                                    </a>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              {step.description}
-                            </p>
-                            {step.commands && step.commands.length > 0 && (
-                              <div className="space-y-2 mb-4">
-                                <p className="text-xs font-medium">Commands:</p>
-                                {step.commands.map((cmd, cmdIndex) => (
-                                  <code key={cmdIndex} className="block p-3 rounded-lg bg-muted text-xs font-mono">
-                                    {cmd}
-                                  </code>
-                                ))}
-                              </div>
-                            )}
-                            {step.warnings && step.warnings.length > 0 && (
-                              <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                                <p className="text-xs font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
-                                  <AlertCircle className="h-3 w-3" />
-                                  Warning
-                                </p>
-                                {step.warnings.map((warning, warnIndex) => (
-                                  <p key={warnIndex} className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
-                                    {warning}
-                                  </p>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          )
+                        })}
                       </CardContent>
                     </Card>
 

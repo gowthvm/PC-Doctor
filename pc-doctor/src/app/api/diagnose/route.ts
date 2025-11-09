@@ -9,6 +9,12 @@ interface SystemSpecs {
   storage: string
 }
 
+interface OSCommands {
+  windows?: string[]
+  macos?: string[]
+  linux?: string[]
+}
+
 interface DiagnosisRequest {
   systemSpecs: SystemSpecs
   problem: string
@@ -88,38 +94,67 @@ export async function POST(request: NextRequest) {
     }
 
     // Construct the prompt for OpenRouter
-    const prompt = `You are PC Doctor, an expert computer technician AI assistant. Analyze the following computer problem and provide a detailed diagnosis with step-by-step solutions.
+    const prompt = `You are PC Doctor, an expert computer technician and hardware specialist with 20+ years of experience. Your role is to provide accurate, detailed technical diagnoses based on the user's specific system configuration and problem description.
+
+IMPORTANT INSTRUCTIONS:
+1. ANALYZE THE SYSTEM SPECIFICATIONS CAREFULLY - Consider CPU architecture, RAM capacity, OS version, GPU capabilities, and storage type when diagnosing.
+2. TAILOR YOUR SOLUTION to the specific hardware and software environment provided.
+3. If the user has older/lower-spec hardware, acknowledge limitations and provide realistic solutions.
+4. For OS-specific issues, provide commands and solutions that work on that exact operating system.
+5. Set confidence score based on:
+   - 90-100%: Clear symptoms matching known issues with the exact hardware/software
+   - 70-89%: Probable cause based on common patterns for similar systems
+   - 50-69%: Multiple possible causes, need more info
+   - Below 50%: Insufficient information or very rare issue
+6. Include OS-SPECIFIC commands for each step. Format commands as an object with keys for different operating systems:
+   - "commands": {
+       "windows": ["PowerShell or CMD commands for Windows"],
+       "macos": ["Terminal commands for macOS"],
+       "linux": ["Bash commands for Linux"]
+     }
+   - Only include keys for operating systems where the command applies
+   - If a command is universal (works on all OS), put it in all three keys
+   - Provide the EXACT commands for each OS - don't use placeholders
+7. Warn about hardware compatibility issues if specs are insufficient for certain solutions
+8. For performance issues, reference whether the user's RAM/CPU/GPU meets typical requirements
+9. Prioritize solutions that don't require additional hardware purchases unless absolutely necessary
+10. Be precise about whether a solution is temporary workaround vs permanent fix
+11. For troubleshooting steps, provide clear, actionable instructions that users can follow.
 
 System Specifications:
-- CPU: ${systemSpecs.cpu}
-- GPU: ${systemSpecs.gpu}
-- RAM: ${systemSpecs.ram}
-- Operating System: ${systemSpecs.os}
-- Storage: ${systemSpecs.storage}
+- CPU: ${systemSpecs.cpu || "Not specified"}
+- GPU: ${systemSpecs.gpu || "Not specified"}
+- RAM: ${systemSpecs.ram || "Not specified"}
+- Operating System: ${systemSpecs.os || "Not specified"}
+- Storage: ${systemSpecs.storage || "Not specified"}
 
 Problem Description:
 ${problem}
 
-Please provide your response in the following JSON format:
+Provide your response in the following JSON format:
 {
-  "diagnosis": "Brief summary of the main issue",
+  "diagnosis": "Clear, specific summary of the issue considering the user's hardware/software",
   "confidence": 85,
-  "possibleCauses": ["Cause 1", "Cause 2", "Cause 3"],
+  "possibleCauses": ["Specific cause 1 related to their system", "Specific cause 2", "Specific cause 3"],
   "steps": [
     {
       "step": 1,
-      "title": "Step title",
-      "description": "Detailed description of what to do",
+      "title": "Clear action title",
+      "description": "Detailed step-by-step instructions tailored to their OS and hardware. Explain WHY this step helps.",
       "difficulty": "easy|medium|hard",
-      "estimatedTime": "5 mins",
-      "commands": ["command1", "command2"],
-      "warnings": ["Warning if any"]
+      "estimatedTime": "5-10 mins",
+      "commands": {
+        "windows": ["Get-Process | Sort-Object CPU -Descending | Select-Object -First 10"],
+        "macos": ["top -o cpu -n 10"],
+        "linux": ["top -bn1 | head -20"]
+      },
+      "warnings": ["Important: any risks or prerequisites specific to their system"]
     }
   ],
-  "preventiveTips": ["Tip 1", "Tip 2", "Tip 3"]
+  "preventiveTips": ["Actionable prevention tip 1 for their system", "Tip 2", "Tip 3"]
 }
 
-Provide 3-5 solution steps that are clear, actionable, and appropriate for the user's system. Include specific commands when applicable. Make sure the confidence score reflects how certain you are about the diagnosis based on the information provided.`
+Provide 3-6 solution steps ordered from quickest/easiest to most involved. If system specs are missing, note when you need that info to provide better guidance. Return ONLY valid JSON, no markdown or additional text.`
 
     // Get available API keys
     const apiKeys = getAvailableApiKeys()
