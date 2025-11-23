@@ -4,19 +4,21 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowRight, CheckCircle2 } from "lucide-react"
+import { AnimatedBackground } from "@/components/ui/animated-background"
+import { Particles } from "@/components/ui/particles"
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen" suppressHydrationWarning>
-      <div className="fixed inset-0 bg-gradient-to-br from-background via-background to-primary/10" />
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent opacity-50" />
+      <AnimatedBackground />
+      <Particles />
 
       <main className="relative z-10 pt-8">
         <section className="container mx-auto px-4 py-12">
           <div className="max-w-4xl mx-auto space-y-12">
             {/* Header */}
             <div className="text-center space-y-4">
-              <h1 className="text-5xl md:text-6xl font-bold tracking-tight">About PC Doctor</h1>
+              <h1 className="text-5xl md:text-6xl font-bold tracking-tight gradient-text">About PC Doctor</h1>
               <p className="text-2xl md:text-3xl font-semibold text-primary">
                 Empowering Everyone to Fix Their Own Tech
               </p>
@@ -87,7 +89,7 @@ export default function AboutPage() {
               <h2 className="text-3xl font-bold">Our Values</h2>
               <div className="space-y-4">
                 <div className="flex gap-4">
-                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-1 icon-hover" />
                   <div>
                     <h3 className="font-semibold text-lg mb-2">Accessibility</h3>
                     <p className="text-muted-foreground">
@@ -97,7 +99,7 @@ export default function AboutPage() {
                 </div>
 
                 <div className="flex gap-4">
-                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-1 icon-hover" />
                   <div>
                     <h3 className="font-semibold text-lg mb-2">Honesty</h3>
                     <p className="text-muted-foreground">
@@ -107,7 +109,7 @@ export default function AboutPage() {
                 </div>
 
                 <div className="flex gap-4">
-                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-1 icon-hover" />
                   <div>
                     <h3 className="font-semibold text-lg mb-2">User Empowerment</h3>
                     <p className="text-muted-foreground">
@@ -117,7 +119,7 @@ export default function AboutPage() {
                 </div>
 
                 <div className="flex gap-4">
-                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-1 icon-hover" />
                   <div>
                     <h3 className="font-semibold text-lg mb-2">Continuous Improvement</h3>
                     <p className="text-muted-foreground">
@@ -152,7 +154,7 @@ export default function AboutPage() {
               <Button asChild size="lg" className="text-lg px-10 h-14 group">
                 <Link href="/">
                   Back to Home
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform icon-hover" />
                 </Link>
               </Button>
             </div>

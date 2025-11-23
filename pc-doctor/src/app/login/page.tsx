@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Activity, Home } from "lucide-react"
+import { AnimatedBackground } from "@/components/ui/animated-background"
+import { Particles } from "@/components/ui/particles"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -39,23 +41,24 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
-      
+      <AnimatedBackground />
+      <Particles />
+
       <Card className="w-full max-w-md glass-card relative z-10">
         <CardHeader className="space-y-1 text-center">
           {/* Home Button */}
           <div className="flex justify-start mb-4">
             <Button asChild variant="ghost" size="sm" className="glass">
               <Link href="/">
-                <Home className="h-4 w-4 mr-2" />
+                <Home className="h-4 w-4 mr-2 icon-hover" />
                 Home
               </Link>
             </Button>
           </div>
-          
+
           <div className="flex justify-center mb-4">
             <div className="p-3 rounded-xl bg-primary/10 backdrop-blur-sm">
-              <Activity className="h-8 w-8 text-primary" />
+              <Activity className="h-8 w-8 text-primary icon-hover" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Welcome to PC Doctor</CardTitle>

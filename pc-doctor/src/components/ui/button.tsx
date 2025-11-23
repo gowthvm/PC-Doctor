@@ -41,17 +41,23 @@ function Button({
   variant,
   size,
   asChild = false,
+  shimmer = false,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    shimmer?: boolean
   }) {
   const Comp = asChild ? Slot : "button"
 
   return (
     <Comp
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(
+        buttonVariants({ variant, size, className }),
+        shimmer &&
+        "relative overflow-hidden after:absolute after:inset-0 after:-translate-x-full after:animate-[shimmer-slide_2s_infinite] after:bg-gradient-to-r after:from-transparent after:via-white/20 after:to-transparent"
+      )}
       {...props}
     />
   )

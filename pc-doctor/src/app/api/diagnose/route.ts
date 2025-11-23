@@ -28,14 +28,14 @@ function getAvailableApiKeys(): string[] {
     process.env.OPENROUTER_API_KEY_2,
     process.env.OPENROUTER_API_KEY_3
   ]
-  
+
   // Filter out undefined or empty keys
   keyEnvVars.forEach(key => {
     if (key && key.trim() !== '') {
       keys.push(key.trim())
     }
   })
-  
+
   return keys
 }
 
@@ -120,6 +120,27 @@ IMPORTANT INSTRUCTIONS:
 9. Prioritize solutions that don't require additional hardware purchases unless absolutely necessary
 10. Be precise about whether a solution is temporary workaround vs permanent fix
 11. For troubleshooting steps, provide clear, actionable instructions that users can follow.
+12. If a step involves changing a Windows setting, include a "windowsSettingsUri" field with the valid ms-settings: URI and a "windowsSettingsLabel".
+    - Common URIs:
+      - ms-settings:windowsupdate (Windows Update)
+      - ms-settings:network-wifi (Wi-Fi)
+      - ms-settings:network-status (Network Status)
+      - ms-settings:sound (Sound)
+      - ms-settings:display (Display/Resolution/Scale)
+      - ms-settings:bluetooth (Bluetooth)
+      - ms-settings:printers (Printers)
+      - ms-settings:storage (Storage)
+      - ms-settings:appsfeatures (Apps & Features/Uninstall)
+      - ms-settings:batterysaver (Battery)
+      - ms-settings:powersleep (Power & Sleep)
+      - ms-settings:windowsdefender (Security/Defender)
+      - ms-settings:troubleshoot (Troubleshoot)
+      - ms-settings:dateandtime (Date & Time)
+      - ms-settings:colors (Dark/Light Mode, Colors)
+      - ms-settings:themes (Themes)
+      - ms-settings:personalization-background (Background/Wallpaper)
+      - ms-settings:lockscreen (Lock Screen)
+      - ms-settings:mousetouchpad (Mouse/Cursor)
 
 System Specifications:
 - CPU: ${systemSpecs.cpu || "Not specified"}
@@ -148,7 +169,9 @@ Provide your response in the following JSON format:
         "macos": ["top -o cpu -n 10"],
         "linux": ["top -bn1 | head -20"]
       },
-      "warnings": ["Important: any risks or prerequisites specific to their system"]
+      "warnings": ["Important: any risks or prerequisites specific to their system"],
+      "windowsSettingsUri": "ms-settings:display",
+      "windowsSettingsLabel": "Open Display Settings"
     }
   ],
   "preventiveTips": ["Actionable prevention tip 1 for their system", "Tip 2", "Tip 3"]
@@ -158,7 +181,7 @@ Provide 3-6 solution steps ordered from quickest/easiest to most involved. If sy
 
     // Get available API keys
     const apiKeys = getAvailableApiKeys()
-    
+
     if (apiKeys.length === 0) {
       return NextResponse.json(
         { error: "No OpenRouter API keys configured" },
@@ -169,11 +192,11 @@ Provide 3-6 solution steps ordered from quickest/easiest to most involved. If sy
     // Try each API key until one works or all fail
     let openRouterResponse: Response | null = null
     let lastError: any = null
-    
+
     for (const apiKey of apiKeys) {
       try {
         openRouterResponse = await callOpenRouterWithKey(apiKey, prompt)
-        
+
         // If the response is successful, break the loop
         if (openRouterResponse.ok) {
           break
@@ -221,7 +244,7 @@ Provide 3-6 solution steps ordered from quickest/easiest to most involved. If sy
     } catch (parseError) {
       console.error("Failed to parse AI response:", parseError)
       console.error("AI Response:", aiResponse)
-      
+
       // Fallback response if parsing fails
       diagnosis = {
         diagnosis: "Unable to parse AI response. Please try again.",
