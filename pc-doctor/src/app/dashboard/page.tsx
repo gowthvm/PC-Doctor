@@ -565,6 +565,71 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
     }
   }
 
+  // Calculate total estimated time from all steps
+  const calculateTotalTime = () => {
+    if (!diagnosis || !diagnosis.steps) return null
+
+    let totalMinMinutes = 0
+    let totalMaxMinutes = 0
+
+    diagnosis.steps.forEach(step => {
+      const timeStr = step.estimatedTime.toLowerCase()
+
+      // Parse different time formats
+      // Examples: "5-10 mins", "2-3 hours", "30 mins", "1 hour"
+      const rangeMatch = timeStr.match(/(\d+)-(\d+)\s*(min|hour|hr)/)
+      const singleMatch = timeStr.match(/(\d+)\s*(min|hour|hr)/)
+
+      if (rangeMatch) {
+        const min = parseInt(rangeMatch[1])
+        const max = parseInt(rangeMatch[2])
+        const unit = rangeMatch[3]
+
+        if (unit.startsWith('hour') || unit.startsWith('hr')) {
+          totalMinMinutes += min * 60
+          totalMaxMinutes += max * 60
+        } else {
+          totalMinMinutes += min
+          totalMaxMinutes += max
+        }
+      } else if (singleMatch) {
+        const value = parseInt(singleMatch[1])
+        const unit = singleMatch[2]
+
+        if (unit.startsWith('hour') || unit.startsWith('hr')) {
+          totalMinMinutes += value * 60
+          totalMaxMinutes += value * 60
+        } else {
+          totalMinMinutes += value
+          totalMaxMinutes += value
+        }
+      }
+    })
+
+    // Format output
+    if (totalMinMinutes === totalMaxMinutes) {
+      if (totalMinMinutes >= 60) {
+        const hours = Math.floor(totalMinMinutes / 60)
+        const mins = totalMinMinutes % 60
+        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+      }
+      return `${totalMinMinutes}m`
+    } else {
+      if (totalMaxMinutes >= 60) {
+        const minHours = Math.floor(totalMinMinutes / 60)
+        const minMins = totalMinMinutes % 60
+        const maxHours = Math.floor(totalMaxMinutes / 60)
+        const maxMins = totalMaxMinutes % 60
+
+        if (minHours === maxHours) {
+          return `${minHours}h ${minMins}-${maxMins}m`
+        }
+        return `${minHours}h ${minMins}m - ${maxHours}h ${maxMins}m`
+      }
+      return `${totalMinMinutes}-${totalMaxMinutes}m`
+    }
+  }
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "easy":
@@ -881,37 +946,29 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
                   </CardContent>
                 </Card>
 
-                {/* Wizard Mode Toggle */}
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <Button
-                    variant={wizardMode ? "default" : "outline"}
-                    onClick={() => setWizardMode(true)}
-                    className="flex-1 glass-card rounded-xl py-6"
-                    disabled={loading}
-                  >
-                    <Wand2 className="h-5 w-5 mr-2" />
-                    Wizard Mode
-                  </Button>
-                  <Button
-                    variant={!wizardMode ? "default" : "outline"}
-                    onClick={() => setWizardMode(false)}
-                    className="flex-1 glass-card rounded-xl py-6"
-                    disabled={loading}
-                  >
-                    Manual Mode
-                  </Button>
-                </div>
-
                 {/* Problem Description Input / Wizard */}
                 <Card className="glass-card-premium rounded-2xl shadow-xl">
                   <CardHeader>
-                    <CardTitle>Describe Your Problem</CardTitle>
-                    <CardDescription>
-                      {wizardMode
-                        ? "Let our wizard guide you through identifying your problem"
-                        : "Be as detailed as possible about the issue you're experiencing"
-                      }
-                    </CardDescription>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle>Describe Your Problem</CardTitle>
+                        <CardDescription>
+                          {wizardMode
+                            ? "Let our wizard guide you through identifying your problem"
+                            : "Be as detailed as possible about the issue you're experiencing"
+                          }
+                        </CardDescription>
+                      </div>
+                      {!wizardMode && !loading && (
+                        <button
+                          onClick={() => setWizardMode(true)}
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Wand2 className="h-3 w-3" />
+                          Need help?
+                        </button>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {wizardMode ? (
@@ -1107,12 +1164,20 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
                             </CardDescription>
                           </div>
                           {diagnosis.steps.length > 0 && (
-                            <div className="text-sm">
+                            <div className="text-sm space-y-2">
                               <div className="flex items-center gap-2 mb-1">
                                 <CheckCircle2 className="h-4 w-4 text-primary icon-hover" />
                                 <span className="font-medium">{completedSteps.size} / {diagnosis.steps.length} Complete</span>
                               </div>
                               <Progress value={getStepProgress()} className="h-2 w-32 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-amber-500" />
+                              {calculateTotalTime() && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">
+                                    Total time: <span className="font-semibold text-foreground">{calculateTotalTime()}</span>
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
