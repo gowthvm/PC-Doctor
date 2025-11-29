@@ -28,24 +28,15 @@ import {
   Clock,
   Zap,
   Shield,
-  Search,
-  History,
-  ChevronLeft,
   ChevronDown,
-  Calendar,
-  X,
-  Trash2,
   Youtube,
   Check,
   Wand2,
-  FileDown,
   Settings
 } from "lucide-react"
 import { User } from "@supabase/supabase-js"
 import DiagnosticWizard from "@/components/diagnostic-wizard"
-import { AnimatedBackground } from "@/components/ui/animated-background"
 import { TypewriterText } from "@/components/ui/typewriter-text"
-import { Particles } from "@/components/ui/particles"
 
 interface DiagnosisStep {
   step: number
@@ -117,13 +108,6 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [status, setStatus] = useState<DiagnosisStatus>("idle")
   const [progress, setProgress] = useState(0)
-  const [historyPanelOpen, setHistoryPanelOpen] = useState(false)
-  const [panelVisible, setPanelVisible] = useState(false)
-
-  const [pastDiagnoses, setPastDiagnoses] = useState<PastDiagnosis[]>([])
-  const [filteredDiagnoses, setFilteredDiagnoses] = useState<PastDiagnosis[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-
   // New UX enhancement states
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set([1]))
@@ -155,53 +139,28 @@ export default function DashboardPage() {
       return "Windows"
     })()
     setDetectedOS(osDetected)
+
+    // Load diagnosis from sessionStorage if passed from history page
+    const loadedDiagnosisStr = sessionStorage.getItem("loadedDiagnosis")
+    if (loadedDiagnosisStr) {
+      try {
+        const pastDiagnosis = JSON.parse(loadedDiagnosisStr) as PastDiagnosis
+        setDiagnosis(pastDiagnosis.diagnosis_result)
+        setProblem(pastDiagnosis.problem_description)
+        setCpu(pastDiagnosis.system_specs.cpu)
+        setGpu(pastDiagnosis.system_specs.gpu)
+        setRam(pastDiagnosis.system_specs.ram)
+        setOs(pastDiagnosis.system_specs.os)
+        setStorage(pastDiagnosis.system_specs.storage)
+        setCompletedSteps(new Set())
+        setExpandedSteps(new Set([1]))
+        sessionStorage.removeItem("loadedDiagnosis")
+      } catch (err) {
+        console.error("Error loading diagnosis from history:", err)
+      }
+    }
   }, [supabase.auth])
 
-  const fetchPastDiagnoses = useCallback(async () => {
-    if (!user) return
-
-    try {
-      const { data, error } = await supabase
-        .from("diagnoses")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20)
-
-      if (error) {
-        console.error("Error fetching past diagnoses:", error)
-        return
-      }
-
-      setPastDiagnoses(data || [])
-      setFilteredDiagnoses(data || [])
-    } catch (err) {
-      console.error("Error fetching past diagnoses:", err)
-    }
-  }, [user, supabase])
-
-  // Fetch past diagnoses
-  useEffect(() => {
-    if (user) {
-      fetchPastDiagnoses()
-    }
-  }, [user, fetchPastDiagnoses])
-
-  // Filter diagnoses based on search query
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredDiagnoses(pastDiagnoses)
-    } else {
-      const filtered = pastDiagnoses.filter(diagnosis =>
-        diagnosis.problem_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        diagnosis.diagnosis_result.diagnosis.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (diagnosis.system_specs.cpu && diagnosis.system_specs.cpu.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (diagnosis.system_specs.gpu && diagnosis.system_specs.gpu.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (diagnosis.system_specs.os && diagnosis.system_specs.os.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-      setFilteredDiagnoses(filtered)
-    }
-  }, [searchQuery, pastDiagnoses])
 
 
 
@@ -313,17 +272,6 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
     toast.success("Diagnosis downloaded!")
   }
 
-  const handleLoadPastDiagnosis = (pastDiagnosis: PastDiagnosis) => {
-    setDiagnosis(pastDiagnosis.diagnosis_result)
-    setProblem(pastDiagnosis.problem_description)
-    setCpu(pastDiagnosis.system_specs.cpu)
-    setGpu(pastDiagnosis.system_specs.gpu)
-    setRam(pastDiagnosis.system_specs.ram)
-    setOs(pastDiagnosis.system_specs.os)
-    setStorage(pastDiagnosis.system_specs.storage)
-    setCompletedSteps(new Set())
-    setExpandedSteps(new Set([1]))
-  }
 
   const toggleStepCompletion = (stepNumber: number) => {
     const newCompleted = new Set(completedSteps)
@@ -468,25 +416,6 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
     }
   }
 
-  const deleteDiagnosis = async (id: string) => {
-    if (!user) return
-
-    try {
-      const { error } = await supabase
-        .from("diagnoses")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id)
-
-      if (error) {
-        console.error("Error deleting diagnosis:", error)
-        return
-      }
-      setPastDiagnoses(prev => prev.filter(d => d.id !== id))
-    } catch (err) {
-      console.error("Error deleting diagnosis:", err)
-    }
-  }
 
   const handleWizardComplete = (description: string) => {
     setProblem(description)
@@ -544,11 +473,6 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
 
       const data = await response.json()
       setDiagnosis(data)
-
-      // Refresh past diagnoses after new diagnosis
-      if (user) {
-        fetchPastDiagnoses()
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
       setStatus("error")
@@ -685,180 +609,53 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
     return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  const toggleHistoryPanel = () => {
-    if (historyPanelOpen) {
-      // Closing
-      setHistoryPanelOpen(false)
-      // Keep panel visible during transition
-      setTimeout(() => {
-        setPanelVisible(false)
-      }, 300)
-    } else {
-      // Opening
-      setPanelVisible(true)
-      // Small delay to ensure DOM update before setting open state
-      setTimeout(() => {
-        setHistoryPanelOpen(true)
-      }, 10)
-    }
-  }
 
   return (
-    <div className="min-h-screen bg-noise">
-      <AnimatedBackground />
-      <Particles />
-
-      <main className="relative z-10 container mx-auto px-4 py-8 animate-fade-in">
+    <div className="min-h-screen">
+      <main className="relative z-10 container mx-auto px-4 py-8 lg:py-10 xl:py-12 animate-fade-in">
         {/* Welcome Section */}
-        {user && (
-          <div className="mb-8 text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Sparkles className="h-5 w-5 text-primary icon-hover" />
-              <h2 className="text-2xl font-bold gradient-text">Welcome back!</h2>
-            </div>
-            <p className="text-muted-foreground">
-              Signed in as <span className="text-foreground font-medium">{user.email}</span>
+        <section className="mb-10 lg:mb-12">
+          <div className="flex flex-col items-center text-center space-y-4 max-w-4xl mx-auto">
+            <Badge className="glass-card px-4 py-2 text-xs md:text-sm font-medium text-foreground/90">
+              <Sparkles className="h-4 w-4 mr-2 text-primary" />
+              Intelligent Diagnosis Console
+            </Badge>
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight gradient-text">
+              Diagnose Your PC in Minutes
+            </h1>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+              Describe your problem and let PC Doctor generate safe, step-by-step fixes tailored to your system.
             </p>
+            {user && (
+              <p className="text-sm md:text-base text-muted-foreground">
+                Signed in as <span className="text-foreground font-medium">{user.email}</span>
+              </p>
+            )}
           </div>
-        )}
 
-        <div className="flex">
-          {/* History Panel - Fixed position sidebar */}
-          {user && panelVisible && (
-            <div className={`fixed left-0 top-0 h-full w-80 transform transition-transform duration-300 ease-in-out z-50 ${historyPanelOpen ? 'translate-x-0' : '-translate-x-full'
-              }`}>
-              <div className="h-full glass-card rounded-r-2xl border overflow-hidden shadow-xl mt-20">
-                <div className="p-5 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold flex items-center gap-2 text-lg">
-                      <History className="h-5 w-5 text-primary" />
-                      Diagnosis History
-                    </h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleHistoryPanel}
-                      className="p-1 h-8 w-8 rounded-full hover:bg-primary/10"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+            <Card className="glass-card rounded-2xl">
+              <CardContent className="py-4 flex flex-col items-center gap-1">
+                <div className="text-2xl font-bold gradient-text">95%</div>
+                <p className="text-xs text-muted-foreground">Success Rate</p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card rounded-2xl">
+              <CardContent className="py-4 flex flex-col items-center gap-1">
+                <div className="text-2xl font-bold gradient-text">10min</div>
+                <p className="text-xs text-muted-foreground">Avg. Solution Time</p>
+              </CardContent>
+            </Card>
+            <Card className="glass-card rounded-2xl">
+              <CardContent className="py-4 flex flex-col items-center gap-1">
+                <div className="text-2xl font-bold gradient-text">24/7</div>
+                <p className="text-xs text-muted-foreground">Available</p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
 
-                  <div className="relative mb-2">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search history..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 glass rounded-full"
-                    />
-                    {searchQuery && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                        onClick={() => setSearchQuery("")}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="overflow-y-auto h-[calc(100vh-220px)] pb-4">
-                  {filteredDiagnoses.length === 0 ? (
-                    <div className="p-6 text-center text-muted-foreground">
-                      <History className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                      <p className="text-sm">
-                        {searchQuery ? "No matching diagnoses found" : "No diagnosis history yet"}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-3 space-y-3">
-                      {filteredDiagnoses.map((diagnosis, idx) => (
-                        <div
-                          key={diagnosis.id}
-                          className="p-4 rounded-xl glass border cursor-pointer hover:bg-primary/5 transition-all duration-200 hover:shadow-md stagger-item"
-                          onClick={() => handleLoadPastDiagnosis(diagnosis)}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-medium text-sm line-clamp-2 flex-1 mr-2">
-                              {diagnosis.diagnosis_result.diagnosis}
-                            </h4>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs flex-shrink-0">
-                                {diagnosis.diagnosis_result.confidence}%
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
-                                onClick={(e) => { e.stopPropagation(); deleteDiagnosis(diagnosis.id) }}
-                                title="Delete diagnosis"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-
-                          <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-                            {diagnosis.problem_description}
-                          </p>
-
-                          <div className="flex items-center text-xs text-muted-foreground mb-3">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {formatDate(diagnosis.created_at)}
-                          </div>
-
-                          <div className="flex flex-wrap gap-1">
-                            {diagnosis.system_specs.cpu && (
-                              <Badge variant="secondary" className="text-xs px-2 py-0.5 rounded-full">
-                                CPU: {diagnosis.system_specs.cpu.split(' ').slice(0, 2).join(' ')}
-                              </Badge>
-                            )}
-                            {diagnosis.system_specs.os && (
-                              <Badge variant="secondary" className="text-xs px-2 py-0.5 rounded-full">
-                                OS: {diagnosis.system_specs.os.split(' ').slice(0, 2).join(' ')}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Overlay for when panel is open */}
-          {user && historyPanelOpen && (
-            <div
-              className="fixed inset-0 bg-black/30 z-40 transition-opacity duration-300"
-              onClick={toggleHistoryPanel}
-            />
-          )}
-
-          {/* Main Content */}
-          <div className={`w-full ${historyPanelOpen ? 'md:pl-80' : ''} transition-all duration-300 ease-in-out`}>
-            <div className="flex items-start justify-center gap-8 relative">
-              {/* Toggle History Button */}
-              {user && (
-                <div className="fixed left-4 top-24 z-30">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleHistoryPanel}
-                    className="glass-card rounded-full p-3 h-12 w-12 shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    {historyPanelOpen ? (
-                      <ChevronLeft className="h-5 w-5" />
-                    ) : (
-                      <History className="h-5 w-5" />
-                    )}
-                  </Button>
-                </div>
-              )}
+        <div className="flex items-start justify-center gap-8 relative">
 
               {/* Input Section - Centered, slides left when diagnosis appears */}
               <div className={`space-y-6 transition-all duration-700 ${diagnosis ? 'lg:w-1/2' : 'lg:w-full max-w-3xl'}`}>
@@ -1064,7 +861,7 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
               {/* Loading Skeleton */}
               {loading && !diagnosis && (
                 <div className="lg:w-1/2 space-y-6 animate-in slide-in-from-right duration-700">
-                  <Card className="glass-card rounded-2xl shadow-xl">
+                  <Card className="glass-card-premium rounded-2xl shadow-xl">
                     <CardHeader>
                       <div className="h-6 w-32 mb-2 rounded-xl shimmer" />
                       <div className="h-4 w-full rounded-xl shimmer" />
@@ -1392,8 +1189,6 @@ ${diagnosis.preventiveTips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}
                 </div>
               )}
             </div>
-          </div>
-        </div>
       </main>
     </div>
   )

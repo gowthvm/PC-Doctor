@@ -41,12 +41,12 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
   return (
-    <div className="min-h-screen bg-noise" suppressHydrationWarning>
+    <div className="min-h-screen" suppressHydrationWarning>
       {/* Animated Background */}
       <AnimatedBackground />
       <Particles />
 
-      <main className="relative z-10 animate-fade-in pt-8">
+      <main className="relative z-10 animate-fade-in pt-8 bg-background/50">
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-12 md:py-20">
           <div className="flex flex-col items-center text-center space-y-6 max-w-5xl mx-auto">

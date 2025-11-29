@@ -45,6 +45,10 @@ export function Header() {
     return activeSection === section
   }
 
+  const isPathActive = (path: string) => {
+    return pathname === path
+  }
+
   // Update indicator position
   useEffect(() => {
     if (!navRef.current || !mounted || pathname !== "/") return
@@ -253,7 +257,7 @@ export function Header() {
             </div>
 
             <nav className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-1">
-              {!user && (
+              {!user && pathname === "/" && (
                 <>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">
                     Explore
@@ -261,7 +265,10 @@ export function Header() {
                   <Link
                     href="#features"
                     className="flex items-center gap-3 text-sm font-medium text-foreground hover:bg-primary/10 hover:text-primary transition-all py-3 px-3 rounded-lg"
-                    onClick={closeMobileMenu}
+                    onClick={(e) => {
+                      handleNavClick("features", e)
+                      closeMobileMenu()
+                    }}
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     Features
@@ -269,7 +276,10 @@ export function Header() {
                   <Link
                     href="#how-it-works"
                     className="flex items-center gap-3 text-sm font-medium text-foreground hover:bg-primary/10 hover:text-primary transition-all py-3 px-3 rounded-lg"
-                    onClick={closeMobileMenu}
+                    onClick={(e) => {
+                      handleNavClick("how-it-works", e)
+                      closeMobileMenu()
+                    }}
                   >
                     <Activity className="h-4 w-4" />
                     How It Works
@@ -277,7 +287,10 @@ export function Header() {
                   <Link
                     href="#benefits"
                     className="flex items-center gap-3 text-sm font-medium text-foreground hover:bg-primary/10 hover:text-primary transition-all py-3 px-3 rounded-lg"
-                    onClick={closeMobileMenu}
+                    onClick={(e) => {
+                      handleNavClick("benefits", e)
+                      closeMobileMenu()
+                    }}
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     Benefits
@@ -291,7 +304,7 @@ export function Header() {
               <Link
                 href="/about"
                 className={`flex items-center gap-3 text-sm font-medium transition-all py-3 px-3 rounded-lg ${
-                  isActive("/about") 
+                  isPathActive("/about") 
                     ? "bg-primary/10 text-primary" 
                     : "text-foreground hover:bg-primary/10 hover:text-primary"
                 }`}
@@ -303,7 +316,7 @@ export function Header() {
               <Link
                 href="/privacy"
                 className={`flex items-center gap-3 text-sm font-medium transition-all py-3 px-3 rounded-lg ${
-                  isActive("/privacy") 
+                  isPathActive("/privacy") 
                     ? "bg-primary/10 text-primary" 
                     : "text-foreground hover:bg-primary/10 hover:text-primary"
                 }`}
@@ -315,7 +328,7 @@ export function Header() {
               <Link
                 href="/terms"
                 className={`flex items-center gap-3 text-sm font-medium transition-all py-3 px-3 rounded-lg ${
-                  isActive("/terms") 
+                  isPathActive("/terms") 
                     ? "bg-primary/10 text-primary" 
                     : "text-foreground hover:bg-primary/10 hover:text-primary"
                 }`}
