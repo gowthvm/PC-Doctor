@@ -46,7 +46,7 @@ export default function Home() {
       <AnimatedBackground />
       <Particles />
 
-      <main className="relative z-10 animate-fade-in pt-8 bg-background/50">
+      <main className="relative z-10 animate-fade-in pt-8 dark:bg-background/40 bg-background/30">
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-12 md:py-20">
           <div className="flex flex-col items-center text-center space-y-6 max-w-5xl mx-auto">

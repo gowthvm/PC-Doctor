@@ -12,7 +12,7 @@ export default function DashboardLayout({
       <AnimatedBackground />
       <Particles />
       <Sidebar />
-      <main className="relative z-10 flex-1 overflow-auto transition-all duration-300 ease-in-out bg-background/50">
+      <main className="relative z-10 flex-1 overflow-auto transition-all duration-300 ease-in-out dark:bg-background/40 bg-background/30">
         {children}
       </main>
     </div>
